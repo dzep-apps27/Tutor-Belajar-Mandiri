@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tutor Sokratik</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    html, body { margin: 0; padding: 0; height: 100%; background: #f0f4f9; }
+    body { display: flex; justify-content: center; align-items: center; padding: 12px; }
+    
+    .container { 
+      width: 100%; 
+      max-width: 720px; 
+      background: #fff; 
+      border-radius: 16px; 
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
+      overflow: hidden; 
+      display: flex; 
+      flex-direction: column; 
+      height: 100%;
+      max-height: 92vh; 
+    }
+    
+    .header { 
+      background: #1a73e8; 
+      color: white; 
+      padding: 14px 20px; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .header h2 { margin: 0; font-size: 18px; }
+    .header span { font-size: 12px; opacity: 0.9; }
+    
+    /* Form Setup Awal */
+    #setup-screen { padding: 24px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; flex: 1; }
+    label { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 4px; display: block; }
+    input, select { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; }
+    button { background: #1a73e8; color: white; border: none; padding: 12px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    button:hover { background: #1557b0; }
+    button:disabled { background: #a0c3ff; cursor: not-allowed; }
+
+    /* Layar Chat Terkunci Proporsional */
+    #chat-screen { 
+      display: none; 
+      flex-direction: column; 
+      flex: 1; 
+      min-height: 0;
+    }
+    
+    #chat-box { 
+      flex: 1; 
+      min-height: 0;
+      padding: 18px; 
+      overflow-y: auto; 
+      display: flex; 
+      flex-direction: column; 
+      gap: 12px; 
+      background: #f8fafd; 
+    }
+    
+    .msg { max-width: 82%; padding: 12px 16px; border-radius: 14px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
+    .msg.user { align-self: flex-end; background: #1a73e8; color: white; border-bottom-right-radius: 4px; }
+    .msg.bot { align-self: flex-start; background: #ffffff; color: #222; border: 1px solid #e0e6ed; border-bottom-left-radius: 4px; }
+    .typing { font-style: italic; color: #666; font-size: 13px; }
+
+    .input-area { 
+      padding: 12px 16px; 
+      background: #fff; 
+      border-top: 1px solid #e0e6ed; 
+      display: flex; 
+      gap: 10px; 
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .input-area textarea { flex: 1; resize: none; height: 44px; padding: 10px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; }
+    .btn-reset { background: rgba(255,255,255,0.2); padding: 6px 12px; font-size: 12px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div>
+      <h2>Tutor Sokratik AI</h2>
+      <span id="info-sesi">Belajar dengan Berkesadaran & Bernalar</span>
+    </div>
+    <button id="btn-reset" class="btn-reset" style="display:none;" onclick="resetSesi()">Ganti Topik</button>
+  </div>
+
+  <!-- Layar Pengisian Identitas & Topik -->
+  <div id="setup-screen">
+    <div>
+      <label>Nama Lengkap & Kelas</label>
+      <input type="text" id="nama" placeholder="Contoh: Jono - 8A" required>
+    </div>
+    <div>
+      <label>Jenjang</label>
+      <select id="jenjang">
+        <option value="SMP Kelas 7">SMP Kelas 7</option>
+        <option value="SMP Kelas 8">SMP Kelas 8</option>
+        <option value="SMP Kelas 9">SMP Kelas 9</option>
+      </select>
+    </div>
+    <div>
+      <label>Mata Pelajaran</label>
+      <select id="mapel">
+        <option value="Bahasa Indonesia">Bahasa Indonesia</option>
+        <option value="Matematika">Matematika</option>
+        <option value="IPA">IPA</option>
+        <option value="IPS">IPS</option>
+        <option value="Bahasa Inggris">Bahasa Inggris</option>
+      </select>
+    </div>
+    <div>
+      <label>Topik / Materi yang Dipelajari</label>
+      <input type="text" id="topik" placeholder="Contoh: Pantun / Kalimat SPOK" required>
+    </div>
+    <button onclick="mulaiBelajar()">Mulai Diskusi Belajar</button>
+  </div>
+
+  <!-- Layar Percakapan Terisolasi -->
+  <div id="chat-screen">
+    <div id="chat-box"></div>
+    <div class="input-area">
+      <textarea id="user-input" placeholder="Tulis jawaban atau pertanyaanmu di sini..." onkeydown="cekEnter(event)"></textarea>
+      <button id="btn-send" onclick="kirimPesan()">Kirim</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // =========================================================================
+  // PENTING: GANTI TEKS DI DALAM TANDA KUTIP DI BAWAH DENGAN URL /exec ANDA
+  // =========================================================================
+  const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwjHl1l0geo5UE1jqmeyT0k4wj0YlzNFhA6MPcNpZJyITd_60WE8ClUS2loL7bEEYMC/exec';
+
+  let sesiData = {};
+  let riwayatChat = [];
+
+  function mulaiBelajar() {
+    const nama = document.getElementById('nama').value.trim();
+    const jenjang = document.getElementById('jenjang').value;
+    const mapel = document.getElementById('mapel').value;
+    const topik = document.getElementById('topik').value.trim();
+
+    if (!nama || !topik) {
+      alert('Harap isi Nama dan Topik materi terlebih dahulu.');
+      return;
+    }
+
+    sesiData = {
+      sessionId: 'SESI-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
+      nama, jenjang, mapel, topik
+    };
+
+    document.getElementById('setup-screen').style.display = 'none';
+    document.getElementById('chat-screen').style.display = 'flex';
+    document.getElementById('btn-reset').style.display = 'block';
+    document.getElementById('info-sesi').innerText = `${nama} | ${jenjang} - ${mapel} (${topik})`;
+
+    const sapaanAwal = `Halo ${nama}! Hari ini kita akan berdiskusi tentang "${topik}" (${mapel}). Bagian mana yang sedang kamu pelajari, atau langkah awal apa yang sudah kamu coba?`;
+    tambahPesan('bot', sapaanAwal);
+    document.getElementById('user-input').focus();
+  }
+
+  function tambahPesan(role, text) {
+    const box = document.getElementById('chat-box');
+    const div = document.createElement('div');
+    div.className = `msg ${role}`;
+    div.innerText = text;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function cekEnter(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      kirimPesan();
+    }
+  }
+
+  async function kirimPesan() {
+    const input = document.getElementById('user-input');
+    const pesan = input.value.trim();
+    if (!pesan) return;
+
+    input.value = '';
+    tambahPesan('user', pesan);
+
+    const btn = document.getElementById('btn-send');
+    btn.disabled = true;
+
+    const box = document.getElementById('chat-box');
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'typing';
+    typingDiv.id = 'typing-indicator';
+    typingDiv.innerText = 'Tutor sedang berpikir...';
+    box.appendChild(typingDiv);
+    box.scrollTop = box.scrollHeight;
+
+    const payload = {
+      ...sesiData,
+      pesanBaru: pesan,
+      riwayatChat: riwayatChat
+    };
+
+    try {
+      const response = await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const hasil = await response.json();
+      const indicator = document.getElementById('typing-indicator');
+      if (indicator) indicator.remove();
+
+      if (hasil.status === 'success') {
+        tambahPesan('bot', hasil.balasan);
+        riwayatChat.push({ role: 'user', text: pesan });
+        riwayatChat.push({ role: 'bot', text: hasil.balasan });
+      } else {
+        tambahPesan('bot', 'Terjadi kendala teknis: ' + hasil.message);
+      }
+    } catch (err) {
+      const indicator = document.getElementById('typing-indicator');
+      if (indicator) indicator.remove();
+      tambahPesan('bot', 'Gagal terhubung ke server: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      input.focus();
+    }
+  }
+
+  function resetSesi() {
+    if (confirm('Mulai sesi baru dengan topik berbeda?')) {
+      riwayatChat = [];
+      document.getElementById('chat-box').innerHTML = '';
+      document.getElementById('chat-screen').style.display = 'none';
+      document.getElementById('btn-reset').style.display = 'none';
+      document.getElementById('setup-screen').style.display = 'flex';
+    }
+  }
+</script>
+
+</body>
+</html>
